@@ -5,6 +5,7 @@ import {
   RawImage,
 } from "@huggingface/transformers";
 import { db } from '../src/db';
+import * as Mp4Muxer from "mp4-muxer";
 
 const model_id = "Xenova/modnet";
 env.backends.onnx.wasm.proxy = false;
@@ -46,7 +47,8 @@ export async function processImage(image: File): Promise<File> {
   ctx.putImageData(pixelData, 0, 0);
   // Convert canvas to blob
   const blob = await new Promise((resolve, reject) => canvas.toBlob((blob) => blob ? resolve(blob) : reject(), "image/png"));
-  const processedFile = new File([blob], image.name, { type: "image/png" });
+  const [fileName, fileExtension] = image.name.split(".");
+  const processedFile = new File([blob], `${fileName}-bg-blasted.png`, { type: "image/png" });
   return processedFile;
 }
 
@@ -62,3 +64,77 @@ export async function processImages() {
   }
   console.log("Processing images done");
 };
+
+
+
+// export async function processVideo() {
+
+//   async function run() {
+//     const canvas = new OffscreenCanvas(720, 1280);
+//     const ctx = canvas.getContext("2d", {
+//       // This forces the use of a software (instead of hardware accelerated) 2D canvas
+//       // This isn't necessary, but produces quicker results
+//       willReadFrequently: true,
+//       // Desynchronizes the canvas paint cycle from the event loop
+//       // Should be less necessary with OffscreenCanvas, but with a real canvas you will want this
+//       desynchronized: true,
+//     });
+
+//     const fps = 30;
+//     const duration = 60;
+//     const numFrames = duration * fps;
+
+//     let muxer = new Mp4Muxer.Muxer({
+//       target: new Mp4Muxer.ArrayBufferTarget(),
+
+//       video: {
+//         // If you change this, make sure to change the VideoEncoder codec as well
+//         codec: "avc",
+//         width: canvas.width,
+//         height: canvas.height,
+//       },
+
+//       // mp4-muxer docs claim you should always use this with ArrayBufferTarget
+//       fastStart: "in-memory",
+//     });
+
+//     let videoEncoder = new VideoEncoder({
+//       output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
+//       error: (e) => console.error(e),
+//     });
+
+//     // This codec should work in most browsers
+//     // See https://dmnsgn.github.io/media-codecs for list of codecs and see if your browser supports
+//     videoEncoder.configure({
+//       codec: "avc1.42001f",
+//       width: canvas.width,
+//       height: canvas.height,
+//       bitrate: 500_000,
+//       bitrateMode: "constant",
+//     });
+
+//     // Loops through and draws each frame to the canvas then encodes it
+//     for (let frameNumber = 0; frameNumber < numFrames; frameNumber++) {
+//       drawFrameToCanvas({
+//         ctx,
+//         canvas,
+//         frameNumber,
+//         numFrames
+//       });
+//       renderCanvasToVideoFrameAndEncode({
+//         canvas,
+//         videoEncoder,
+//         frameNumber,
+//         fps
+//       })
+//     }
+
+//     // Forces all pending encodes to complete
+//     await videoEncoder.flush();
+
+//     muxer.finalize();
+
+//     let buffer = muxer.target.buffer;
+//     downloadBlob(new Blob([buffer]));
+//   }
+// }
