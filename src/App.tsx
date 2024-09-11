@@ -10,16 +10,15 @@ import {
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import { db } from './db';
-import { useLiveQuery } from "dexie-react-hooks";
 import { Images } from "./components/Images";
 import { processImages } from "../lib/process";
+// import "onnxruntime-web/webgpu";
+ import "onnxruntime-web";
 
 export default function App() {
   const [images, setImages] = useState([]);
 
   const [processedImages, setProcessedImages] = useState([]);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [isDownloadReady, setIsDownloadReady] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -30,6 +29,7 @@ export default function App() {
     (async () => {
       try {
         if (!navigator.gpu) {
+          console.log("WebGPU is not supported in this browser.");
           throw new Error("WebGPU is not supported in this browser.");
         }
         const model_id = "Xenova/modnet";
@@ -49,14 +49,6 @@ export default function App() {
   }, []);
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
-    // console.log('Setting Images');
-    // setImages((prevImages) => [
-    //   ...prevImages,
-    //   ...acceptedFiles.map((file) => URL.createObjectURL(file)),
-    // ]);
-    // console.log(acceptedFiles);
-
-    // Add images to IndexedDB
     for (const file of acceptedFiles) {
       const id = await db.images.add({ file, processedFile: "null" });
       console.log(`Added image with id ${id}`);
@@ -78,95 +70,15 @@ export default function App() {
     },
   });
 
-  const removeImage = (index) => {
-    setImages((prevImages) => prevImages.filter((_, i) => i !== index));
-    setProcessedImages((prevProcessed) =>
-      prevProcessed.filter((_, i) => i !== index),
-    );
-  };
-
-  const processImagesx = async () => {
-    setIsProcessing(true);
-    setProcessedImages([]);
-
-    const model = modelRef.current;
-    const processor = processorRef.current;
-
-    for (let i = 0; i < images.length; ++i) {
-      // Load image
-      const img = await RawImage.fromURL(images[i]);
-
-      // Pre-process image
-      const { pixel_values } = await processor(img);
-
-      // Predict alpha matte
-      const { output } = await model({ input: pixel_values });
-
-      const maskData = (
-        await RawImage.fromTensor(output[0].mul(255).to("uint8")).resize(
-          img.width,
-          img.height,
-        )
-      ).data;
-
-      // Create new canvas
-      const canvas = document.createElement("canvas");
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext("2d");
-
-      // Draw original image output to canvas
-      ctx.drawImage(img.toCanvas(), 0, 0);
-
-      // Update alpha channel
-      const pixelData = ctx.getImageData(0, 0, img.width, img.height);
-      for (let i = 0; i < maskData.length; ++i) {
-        pixelData.data[4 * i + 3] = maskData[i];
-      }
-      ctx.putImageData(pixelData, 0, 0);
-      // Save processed image
-      const processedImage = canvas.toBlob((blob) => {
-        db.images.update(i + 1, { processedFile: blob });
-      });
-      setProcessedImages((prevProcessed) => [
-        ...prevProcessed,
-        canvas.toDataURL("image/png"),
-      ]);
-    }
-
-    setIsProcessing(false);
-    setIsDownloadReady(true);
-  };
 
   const downloadAsZip = async () => {
     const zip = new JSZip();
-    const promises = images.map(
-      (image, i) =>
-        new Promise((resolve) => {
-          const canvas = document.createElement("canvas");
-          const ctx = canvas.getContext("2d");
-
-          const img = new Image();
-          img.src = processedImages[i] || image;
-
-          img.onload = () => {
-            canvas.width = img.width;
-            canvas.height = img.height;
-            ctx.drawImage(img, 0, 0);
-            canvas.toBlob((blob) => {
-              if (blob) {
-                zip.file(`image-${i + 1}.png`, blob);
-              }
-              resolve(null);
-            }, "image/png");
-          };
-        }),
-    );
-
-    await Promise.all(promises);
-
+    const images = (await db.images.toArray()).map((image) => image.processedFile);
+    for(const image of images){
+      zip.file(image.name, image);
+    }
     const content = await zip.generateAsync({ type: "blob" });
-    saveAs(content, "images.zip");
+    saveAs(content, `background-blasted.zip`);
   };
 
   const clearAll = () => {
@@ -285,7 +197,6 @@ export default function App() {
           <div className="flex gap-4">
             <button
               onClick={downloadAsZip}
-              disabled={!isDownloadReady}
               className="px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-black disabled:bg-gray-700 disabled:cursor-not-allowed transition-colors duration-200 text-sm"
             >
               Download as ZIP
@@ -329,13 +240,7 @@ export default function App() {
                   </button>
                 </div>
               )}
-              <button
-                onClick={() => removeImage(index)}
-                className="absolute top-2 right-2 bg-black bg-opacity-50 text-white w-6 h-6 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:bg-opacity-70"
-                aria-label={`Remove image ${index + 1}`}
-              >
-                &#x2715;
-              </button>
+
             </div>
           ))}
         </div>

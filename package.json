@@ -10,29 +10,30 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@huggingface/transformers": "3.0.0-alpha.13",
+    "@huggingface/transformers": "3.0.0-alpha.15",
     "dexie": "^4.0.8",
     "dexie-react-hooks": "^1.1.7",
     "file-saver": "^2.0.5",
     "jszip": "^3.10.1",
     "mp4-muxer": "^5.1.1",
+    "onnxruntime-web": "^1.20.0-dev.20240908-de7a02beef",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-dropzone": "^14.2.3"
   },
   "devDependencies": {
-    "@eslint/js": "^9.9.0",
-    "@types/react": "^18.3.3",
+    "@eslint/js": "^9.10.0",
+    "@types/react": "^18.3.5",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.20",
-    "eslint": "^9.9.0",
-    "eslint-plugin-react": "^7.35.0",
+    "eslint": "^9.10.0",
+    "eslint-plugin-react": "^7.35.2",
     "eslint-plugin-react-hooks": "^5.1.0-rc.0",
-    "eslint-plugin-react-refresh": "^0.4.9",
+    "eslint-plugin-react-refresh": "^0.4.11",
     "globals": "^15.9.0",
-    "postcss": "^8.4.41",
+    "postcss": "^8.4.45",
     "tailwindcss": "^3.4.10",
-    "vite": "^5.4.1"
+    "vite": "^5.4.3"
   }
 }
